@@ -1,3 +1,6 @@
+### Ignore configuration file which holds hostname, passwords, etc ###
+application.conf
+
 ### Eclipse ###
 *.pydevproject
 .metadata

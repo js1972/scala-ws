@@ -2,6 +2,7 @@ package au.com.jaylin.ws.test
 
 import scala.xml.{Elem, XML}
 import scala.xml.PrettyPrinter
+import com.typesafe.config._
 import org.apache.commons.codec.binary.Base64
 
 
@@ -10,7 +11,7 @@ class SoapClient {
         println("SoapClient error: " + msg)
     }
     
-    def wrap(xml: Elem): String = {
+    def wrapInSOAPEnvelope(xml: Elem): String = {
         val buf = new StringBuilder
         buf.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n")
         buf.append("<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\">\n")
@@ -23,7 +24,7 @@ class SoapClient {
     
     def sendMessage(host: String, req: Elem, user: String, pass: String): Option[Elem] = {
         val url = new java.net.URL(host)
-        val outs = wrap(req).getBytes()
+        val outs = wrapInSOAPEnvelope(req).getBytes()
         val conn = url.openConnection.asInstanceOf[java.net.HttpURLConnection]
         try {
             conn.setRequestMethod("POST")
@@ -47,7 +48,9 @@ class SoapClient {
 
 object SoapTest {
     def doTest {
-        val host = "http://app1poy.inpex.com.au:58000/CommunicationChannelService/HTTPBasicAuth?style=document"
+        val conf = ConfigFactory.load()
+        
+        val host = conf.getString("config.host") + "/CommunicationChannelService/HTTPBasicAuth?style=document"
         val req  = <pns:read xmlns:pns="urn:CommunicationChannelServiceVi">
                        <yq1:CommunicationChannelReadRequest xmlns:yq1="urn:CommunicationChannelServiceVi" xmlns:pns="urn:com.sap.aii.ibdir.server.api.types">
                            <pns:CommunicationChannelID>
@@ -58,9 +61,8 @@ object SoapTest {
                    </pns:read>
 
         val cli = new SoapClient
-        println("##### request:\n" + cli.wrap(req))
-        val auth = ("jscott", "sophie05")
-        val resp = cli.sendMessage(host, req, auth _1, auth _2)
+        println("##### request:\n" + cli.wrapInSOAPEnvelope(req))
+        val resp = cli.sendMessage(host, req, conf.getString("config.user"), conf.getString("config.pass"))
         if (resp.isDefined) {
             println("##### response:\n")
             val pp = new PrettyPrinter(80, 4)
